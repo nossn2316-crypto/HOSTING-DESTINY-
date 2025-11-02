@@ -1,187 +1,647 @@
-#!/bin/bash
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOSTING NEXUS - استضافة محمية بالكامل</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-# ======================================
-# سكريبت حماية Anti-DDoS للـ VPS
-# يجب تشغيله كـ root
-# ======================================
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #fff;
+            line-height: 1.6;
+        }
 
-echo "========================================="
-echo "  تثبيت حماية Anti-DDoS للسيرفر"
-echo "========================================="
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
 
-# التحقق من صلاحيات root
-if [ "$EUID" -ne 0 ]; then 
-    echo "يرجى تشغيل السكريبت بصلاحيات root"
-    exit 1
-fi
+        /* Header */
+        header {
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0, 194, 255, 0.1);
+        }
 
-# متغيرات قابلة للتعديل
-SAMP_PORT=7777
-SSH_PORT=22
-MAX_CONN_PER_IP=3
-RATE_LIMIT=50
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-# ======================================
-# 1. تثبيت الأدوات المطلوبة
-# ======================================
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00c2ff, #0066ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-echo "[1/6] تثبيت الأدوات الأساسية..."
-apt-get update -qq
-apt-get install -y iptables iptables-persistent fail2ban ufw > /dev/null 2>&1
+        .shield-icon {
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(45deg, #00c2ff, #0066ff);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
 
-# ======================================
-# 2. إعداد UFW (Firewall بسيط)
-# ======================================
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
 
-echo "[2/6] إعداد UFW..."
-ufw --force disable
-ufw --force reset
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            transition: color 0.3s;
+            font-weight: 500;
+        }
 
-# السماح بالمنافذ الأساسية
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow $SSH_PORT/tcp comment 'SSH'
-ufw allow $SAMP_PORT/udp comment 'SA-MP Server'
+        nav a:hover {
+            color: #00c2ff;
+        }
 
-# تفعيل UFW
-ufw --force enable
+        /* Hero Section */
+        .hero {
+            padding: 150px 0 100px;
+            text-align: center;
+        }
 
-# ======================================
-# 3. إعداد iptables المتقدمة
-# ======================================
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #00c2ff, #0066ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: fadeInUp 1s ease;
+        }
 
-echo "[3/6] إعداد iptables للحماية المتقدمة..."
+        .hero p {
+            font-size: 20px;
+            color: #b0b8d4;
+            margin-bottom: 40px;
+            animation: fadeInUp 1s ease 0.2s backwards;
+        }
 
-# مسح القواعد القديمة
-iptables -F
-iptables -X
-iptables -t nat -F
-iptables -t nat -X
-iptables -t mangle -F
-iptables -t mangle -X
+        .cta-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(45deg, #00c2ff, #0066ff);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 18px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: fadeInUp 1s ease 0.4s backwards;
+        }
 
-# السياسة الافتراضية
-iptables -P INPUT DROP
-iptables -P FORWARD DROP
-iptables -P OUTPUT ACCEPT
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 194, 255, 0.4);
+        }
 
-# السماح بـ localhost
-iptables -A INPUT -i lo -j ACCEPT
-iptables -A OUTPUT -o lo -j ACCEPT
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: rgba(26, 31, 58, 0.5);
+        }
 
-# السماح بالاتصالات المؤسسة مسبقاً
-iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+        .section-title {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 60px;
+            color: #00c2ff;
+        }
 
-# ======================================
-# 4. الحماية من هجمات DDoS
-# ======================================
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
 
-echo "[4/6] تطبيق قواعد Anti-DDoS..."
+        .feature-card {
+            background: rgba(10, 14, 39, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 194, 255, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-align: center;
+        }
 
-# حماية من SYN flood
-iptables -A INPUT -p tcp --syn -m limit --limit 1/s --limit-burst 3 -j ACCEPT
-iptables -A INPUT -p tcp --syn -j DROP
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 194, 255, 0.3);
+            border-color: #00c2ff;
+        }
 
-# حماية من UDP flood على منفذ SA-MP
-iptables -A INPUT -p udp --dport $SAMP_PORT -m state --state NEW -m recent --set
-iptables -A INPUT -p udp --dport $SAMP_PORT -m state --state NEW -m recent --update --seconds 1 --hitcount $RATE_LIMIT -j DROP
-iptables -A INPUT -p udp --dport $SAMP_PORT -j ACCEPT
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
 
-# حماية من ICMP flood (ping)
-iptables -A INPUT -p icmp --icmp-type echo-request -m limit --limit 1/s -j ACCEPT
-iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
+        .feature-card h3 {
+            color: #00c2ff;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
 
-# حماية من port scanning
-iptables -N port-scanning
-iptables -A port-scanning -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s --limit-burst 2 -j RETURN
-iptables -A port-scanning -j DROP
+        /* DDoS Protection Section */
+        .ddos-section {
+            padding: 80px 0;
+            text-align: center;
+        }
 
-# حد الاتصالات المتزامنة من نفس IP
-iptables -A INPUT -p tcp --syn --dport $SAMP_PORT -m connlimit --connlimit-above $MAX_CONN_PER_IP -j REJECT
-iptables -A INPUT -p udp --dport $SAMP_PORT -m connlimit --connlimit-above $MAX_CONN_PER_IP -j DROP
+        .ddos-box {
+            background: linear-gradient(135deg, rgba(0, 194, 255, 0.1), rgba(0, 102, 255, 0.1));
+            border: 2px solid #00c2ff;
+            border-radius: 20px;
+            padding: 50px;
+            margin: 40px 0;
+            position: relative;
+            overflow: hidden;
+        }
 
-# حماية SSH
-iptables -A INPUT -p tcp --dport $SSH_PORT -m state --state NEW -m recent --set
-iptables -A INPUT -p tcp --dport $SSH_PORT -m state --state NEW -m recent --update --seconds 60 --hitcount 4 -j DROP
-iptables -A INPUT -p tcp --dport $SSH_PORT -j ACCEPT
+        .ddos-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 194, 255, 0.1), transparent);
+            animation: rotate 4s linear infinite;
+        }
 
-# منع IP spoofing
-iptables -A INPUT -s 10.0.0.0/8 -j DROP
-iptables -A INPUT -s 172.16.0.0/12 -j DROP
-iptables -A INPUT -s 192.168.0.0/16 -j DROP
-iptables -A INPUT -s 224.0.0.0/4 -j DROP
-iptables -A INPUT -s 240.0.0.0/5 -j DROP
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
-# حماية من fragmented packets
-iptables -A INPUT -f -j DROP
+        .ddos-content {
+            position: relative;
+            z-index: 1;
+        }
 
-# منع invalid packets
-iptables -A INPUT -m state --state INVALID -j DROP
+        .ddos-box h2 {
+            font-size: 40px;
+            margin-bottom: 20px;
+            color: #00c2ff;
+        }
 
-# ======================================
-# 5. حفظ القواعد
-# ======================================
+        .ddos-stats {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
 
-echo "[5/6] حفظ قواعد iptables..."
-iptables-save > /etc/iptables/rules.v4
-netfilter-persistent save > /dev/null 2>&1
+        .stat {
+            text-align: center;
+        }
 
-# ======================================
-# 6. إعداد Fail2Ban
-# ======================================
+        .stat-number {
+            font-size: 48px;
+            font-weight: bold;
+            color: #00c2ff;
+            display: block;
+        }
 
-echo "[6/6] إعداد Fail2Ban..."
+        .stat-label {
+            color: #b0b8d4;
+            font-size: 18px;
+        }
 
-# إنشاء ملف تكوين Fail2Ban لـ SA-MP
-cat > /etc/fail2ban/filter.d/samp.conf << 'EOF'
-[Definition]
-failregex = ^.*\[.*\] Incoming connection: <HOST>:\d+.*$
-            ^.*Connection attempt from <HOST> blocked.*$
-ignoreregex =
-EOF
+        /* Server Info Box */
+        .server-info-box {
+            background: rgba(10, 14, 39, 0.9);
+            border: 2px solid #00c2ff;
+            border-radius: 20px;
+            padding: 40px;
+            margin-top: 40px;
+            text-align: center;
+        }
 
-# إضافة jail لـ SA-MP
-cat >> /etc/fail2ban/jail.local << EOF
+        .server-info-box h3 {
+            font-size: 28px;
+            color: #00c2ff;
+            margin-bottom: 30px;
+        }
 
-[samp-ddos]
-enabled = true
-port = $SAMP_PORT
-filter = samp
-logpath = /path/to/samp/server_log.txt
-maxretry = 10
-findtime = 60
-bantime = 3600
-EOF
+        .server-details {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
 
-# إعادة تشغيل Fail2Ban
-systemctl restart fail2ban
-systemctl enable fail2ban
+        .ip-display {
+            background: rgba(0, 194, 255, 0.1);
+            padding: 20px 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 194, 255, 0.3);
+        }
 
-# ======================================
-# تأكيد الاكتمال
-# ======================================
+        .ip-label {
+            display: block;
+            color: #b0b8d4;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
 
-echo ""
-echo "========================================="
-echo "  ✓ تم تثبيت الحماية بنجاح!"
-echo "========================================="
-echo ""
-echo "ملخص الإعدادات:"
-echo "  - منفذ SA-MP: $SAMP_PORT"
-echo "  - منفذ SSH: $SSH_PORT"
-echo "  - حد الاتصالات لكل IP: $MAX_CONN_PER_IP"
-echo "  - حد الحزم في الثانية: $RATE_LIMIT"
-echo ""
-echo "الأدوات المفعلة:"
-echo "  ✓ UFW Firewall"
-echo "  ✓ iptables المتقدمة"
-echo "  ✓ Fail2Ban"
-echo ""
-echo "أوامر مفيدة:"
-echo "  - عرض قواعد iptables: iptables -L -n -v"
-echo "  - حالة Fail2Ban: fail2ban-client status"
-echo "  - إضافة IP للقائمة البيضاء: iptables -I INPUT -s IP_ADDRESS -j ACCEPT"
-echo "  - حظر IP: iptables -A INPUT -s IP_ADDRESS -j DROP"
-echo ""
-echo "تحذير: تأكد من أن منفذ SSH ($SSH_PORT) مفتوح قبل قطع الاتصال!"
-echo "=====================================
+        .ip-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00c2ff;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+
+        .copy-btn {
+            background: linear-gradient(45deg, #00c2ff, #0066ff);
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 194, 255, 0.4);
+        }
+
+        .copy-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .server-note {
+            margin-top: 20px;
+            color: #b0b8d4;
+            font-size: 16px;
+        }
+
+        /* Pricing Section */
+        .pricing {
+            padding: 80px 0;
+            background: rgba(26, 31, 58, 0.5);
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .pricing-card {
+            background: rgba(10, 14, 39, 0.9);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px solid rgba(0, 194, 255, 0.2);
+            transition: transform 0.3s, border-color 0.3s;
+            text-align: center;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            border-color: #00c2ff;
+        }
+
+        .pricing-card.featured {
+            border-color: #00c2ff;
+            background: linear-gradient(135deg, rgba(0, 194, 255, 0.1), rgba(0, 102, 255, 0.1));
+            transform: scale(1.05);
+        }
+
+        .plan-name {
+            font-size: 24px;
+            color: #00c2ff;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .plan-price {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .plan-price span {
+            font-size: 20px;
+            color: #b0b8d4;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin: 30px 0;
+            text-align: right;
+        }
+
+        .plan-features li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #b0b8d4;
+        }
+
+        .plan-features li::before {
+            content: "✓ ";
+            color: #00c2ff;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .plan-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #00c2ff, #0066ff);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: transform 0.3s;
+        }
+
+        .plan-button:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Contact Section */
+        .contact {
+            padding: 80px 0;
+        }
+
+        .contact-form {
+            max-width: 600px;
+            margin: 50px auto;
+            background: rgba(10, 14, 39, 0.8);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 194, 255, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #00c2ff;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            background: rgba(26, 31, 58, 0.8);
+            border: 1px solid rgba(0, 194, 255, 0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #00c2ff;
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #00c2ff, #0066ff);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(10, 14, 39, 0.95);
+            padding: 40px 0;
+            text-align: center;
+            border-top: 1px solid rgba(0, 194, 255, 0.2);
+        }
+
+        footer p {
+            color: #b0b8d4;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .pricing-card.featured {
+                transform: scale(1);
+            }
+
+            nav ul {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">
+                <div class="shield-icon">🛡️</div>
+                HOSTING NEXUS
+            </div>
+            <ul>
+                <li><a href="#home">الرئيسية</a></li>
+                <li><a href="#features">المميزات</a></li>
+                <li><a href="#pricing">الأسعار</a></li>
+                <li><a href="#contact">اتصل بنا</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section id="home" class="hero">
+        <div class="container">
+            <h1>استضافة VPS محمية بالكامل</h1>
+            <p>خوادم افتراضية قوية مع حماية متقدمة ضد هجمات DDoS</p>
+            <a href="#pricing" class="cta-button">ابدأ الآن</a>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">لماذا تختارنا؟</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>أداء فائق</h3>
+                    <p>خوادم SSD بسرعات عالية وأداء متميز</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>حماية DDoS</h3>
+                    <p>حماية متقدمة من جميع أنواع الهجمات</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>نشر فوري</h3>
+                    <p>تفعيل السيرفر خلال دقائق</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💻</div>
+                    <h3>لوحة تحكم سهلة</h3>
+                    <p>إدارة كاملة من لوحة تحكم بسيطة</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>أمان عالي</h3>
+                    <p>تشفير وحماية متعددة الطبقات</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📞</div>
+                    <h3>دعم 24/7</h3>
+                    <p>فريق دعم جاهز على مدار الساعة</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ddos-section">
+        <div class="container">
+            <div class="ddos-box">
+                <div class="ddos-content">
+                    <h2>🛡️ حماية DDoS متقدمة</h2>
+                    <p style="font-size: 20px; color: #b0b8d4; margin: 20px 0;">نحمي خوادمك من أقوى الهجمات</p>
+                    <div class="ddos-stats">
+                        <div class="stat">
+                            <span class="stat-number">500+</span>
+                            <span class="stat-label">Gbps حماية</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">99.9%</span>
+                            <span class="stat-label">وقت التشغيل</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">24/7</span>
+                            <span class="stat-label">مراقبة مستمرة</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="server-info-box">
+                <h3>🌐 معلومات الاتصال بالسيرفر</h3>
+                <div class="server-details">
+                    <div class="ip-display">
+                        <span class="ip-label">عنوان IP والبورت:</span>
+                        <span class="ip-value" id="serverIP">188.87.86.97:7777</span>
+                    </div>
+                    <button class="copy-btn" onclick="copyIP()">
+                        <span id="copyText">📋 نسخ</span>
+                    </button>
+                </div>
+                <p class="server-note">استخدم هذا العنوان للاتصال بخوادمنا</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <h2 class="section-title">خطط الأسعار</h2>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3 class="plan-name">الباقة الأساسية</h3>
+                    <div class="plan-price">$15<span>/شهرياً</span></div>
+                    <ul class="plan-features">
+                        <li>2 CPU Cores</li>
+                        <li>4 GB RAM</li>
+                        <li>80 GB SSD</li>
+                        <li>2 TB نقل البيانات</li>
+                        <li>حماية DDoS أساسية</li>
+                        <li>دعم فني</li>
+                    </ul>
+                    <a href="#contact" class="plan-button">اطلب الآن</a>
+                </div>
+
+                <div class="pricing-card featured">
+                    <h3 class="plan-name">⭐ VIP</h3>
+                    <div class="plan-price">50<span> DH/شهرياً</span></div>
+                    <ul class="plan-features">
+                        <li>4 CPU Cores</li>
+                        <li>8 GB RAM</li>
+                        <li>160 GB SSD</li>
+                        <li>4 TB نقل البيانات</li>
+                        <li>حماية DDoS متقدمة</li>
+                        <li>نسخ احتياطي يومي</li>
+                        <li>دعم ذو أولوية</li>
+                    </ul>
+                    <a href="#contact" class="plan-button">اطلب الآن</a>
+                </div>
+
+                <div class="pricing-card">
+                    <h3 class="plan-name">باقة الأعمال</h3>
+                    <div class="plan-price">$70<span>/شهرياً</span></div>
+                    <ul class="plan-features">
+                        <li>8 CPU Cores</li>
+                        <li>16 GB RAM</li>
+                        <li>320 GB SSD</li>
+                        <li>8 TB نقل البيانات</li>
+                        <li>حماية DDoS قصوى</li>
+                        <li>نسخ احتياطي كل ساعة</li>
+                        <li>دعم VIP</li>
+                        <li>IP مخصص</li>
+                    </ul>
+                    <a href="#contact" class="plan-button">اطلب
